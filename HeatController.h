@@ -1,6 +1,7 @@
 #include "Arduino.h"
 #include "enums.h"
 #include "Heater.h"
+#include <PID_v1.h>
 
 #define HEATER_FULL_INTERVAL_UPDATE 15000
 #define HEATER_CONTROLLER_INTERVAL 1000
@@ -14,7 +15,7 @@ private:
     double _setTemperature;
     Heater *_heat_weak;
     Heater *_heat_strong;
-    //PID *_pid;
+    PID *_pid;
 public:
     HeatController(Heater *heat_weak, Heater *heat_strong);
     void SetTemperature(unsigned int temp);
