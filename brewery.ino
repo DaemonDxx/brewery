@@ -7,6 +7,7 @@
 #include "HeatController.h"
 #include "HeaterGroup.h"
 #include <JC_Button.h>
+#include "Recipe.h"
 
 #define HEATER_FULL_INTERVAL_UPDATE 15000
 #define HEATER_WEAK_PIN 5
@@ -42,10 +43,11 @@ unsigned long
   week_power = 0,
   strong_power = 0;
 
-LiquidLine start_brew_line(1, 0, "- Start brew");
-LiquidLine main_recipe_line(1, 1, "- Recipe");
-LiquidLine test_line(1, 2, "- Test");
-LiquidScreen main_screen(start_brew_line, main_recipe_line, test_line);
+LiquidLine brew_line(1, 0, "- Brew");
+LiquidLine boiling_line(1, 1, "- Boiling");
+LiquidLine heating_line(1, 2, "- Heating");
+LiquidLine test_line(1, 3, "- Test");
+LiquidScreen main_screen(brew_line, boiling_line, heating_line, test_line);
 #define MAIN_SCREEN_INDEX 1
 
 LiquidLine test_temperature_line(1,0, "T1: ", tempUp, " T2: ", tempDown);
@@ -59,7 +61,7 @@ LiquidLine brew_temp_info(2,2, "T: 88.32C -> 88C");
 LiquidLine brew_time_info(0,3, "Delay: 180:55");
 LiquidScreen brew_screen(brew_stage_info, brew_temp_info, brew_time_info);
 
-LiquidMenu menu(lcd, main_screen, test_screen, brew_screen, 1);
+LiquidMenu menu(lcd, main_screen, brew_screen, test_screen, 1);
 
 Scheduler task_manager;
 
@@ -178,7 +180,7 @@ void
 void mainScreenClickHandler() {
   switch (menu.get_focusedLine()) {
     case 0:
-
+      menu.change_screen(2);
     break;
 
     case 1:
@@ -186,6 +188,10 @@ void mainScreenClickHandler() {
     break;
 
     case 2:
+      menu.change_screen(3);
+    break;
+
+    case 3:
       menu.change_screen(3);
     break;
 
@@ -209,8 +215,8 @@ void readButtons() {
 }
 
 void mainScreenInit() {
-  start_brew_line.attach_function(0, &mainScreenClickHandler);
-  main_recipe_line.attach_function(0, &mainScreenClickHandler);
+  brew_line.attach_function(0, &mainScreenClickHandler);
+  boiling_line.attach_function(0, &mainScreenClickHandler);
   test_line.attach_function(0, &mainScreenClickHandler);
 }
 
@@ -270,6 +276,11 @@ void setup() {
   heat_strong.on();
   controller.on();
   controller.setTemperature(49);
+  Recipe r(1);
+  r.setStage(0, 5, 24);
+  Serial.println(r.getPause(0));
+  Serial.println(r.getTemperature(0));
+  Serial.println(r.getStageCount());
 }
 
 void mainScreenUpdate() {
