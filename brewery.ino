@@ -5,6 +5,7 @@
 #include "Heater.h"
 #include "Arduino.h"
 #include "HeatController.h"
+#include "HeaterGroup.h"
 #include <JC_Button.h>
 
 #define HEATER_FULL_INTERVAL_UPDATE 15000
@@ -19,7 +20,8 @@ Button cancelBtn(A2, 100);
 
 Heater heat_weak(HEATER_WEAK_PIN);
 Heater heat_strong(HEATER_STRONG_PIN);
-HeatController controller(&heat_weak, &heat_strong);
+HeaterGroup hGroup(&heat_weak, &heat_strong);
+HeatController controller(&hGroup);
 
 LiquidCrystal_I2C lcd(0x26,20,4);
 
@@ -33,7 +35,8 @@ double tempAverage = 0;
 
 void start_measurment(),
      end_measurment(),
-     updateHeater();
+     updateHeater(),
+     updatePowerInfo();
 
 unsigned long 
   week_power = 0,
@@ -104,12 +107,11 @@ void end_measurment() {
     tempUp = t1;
     tempDown = t2;
     tempAverage = (t1+t2)/2;
-    Serial.print("Temprerature 1: "); Serial.println(t1);
-    Serial.print("Temprerature 2: "); Serial.println(t2);
   }
   tTempMeasurment.setCallback(&start_measurment);
   tTempMeasurment.setInterval(INTERVAL_MEASURMENT - DELAY_CONVERATION);
-  //controller.Update(t);
+  controller.update(tempAverage);
+  updatePowerInfo();
 }
 
 // TEMPERATURE MEASURMENT MODULE EN
@@ -215,6 +217,11 @@ void mainScreenInit() {
 #define WEEK_K 10
 #define STRONG_K 20
 
+void updatePowerInfo() {
+  week_power = heat_weak.getPower() * WEEK_K;
+  strong_power = heat_strong.getPower() * STRONG_K;
+}
+
 void changePowerWeek() {
   int offset = 1;
   if (enter.pressedFor(LONG_PRESS_DELAY) || cancelBtn.pressedFor(LONG_PRESS_DELAY)) {
@@ -225,7 +232,7 @@ void changePowerWeek() {
   }
   int newState = heat_weak.getPower() + offset;
   heat_weak.setPower(newState);
-  week_power = heat_weak.getPower() * WEEK_K;
+  updatePowerInfo();
 }
 
 void changePowerStrong() {
@@ -238,7 +245,7 @@ void changePowerStrong() {
   }
   int newState = heat_strong.getPower() + offset;
   heat_strong.setPower(newState);
-  strong_power = heat_strong.getPower() * STRONG_K;
+  updatePowerInfo();
 }
 
 void testScreenInit() {
@@ -261,6 +268,8 @@ void setup() {
   buttonsInit();
   heat_weak.on();
   heat_strong.on();
+  controller.on();
+  controller.setTemperature(49);
 }
 
 void mainScreenUpdate() {

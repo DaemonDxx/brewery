@@ -2,6 +2,7 @@
 #include "enums.h"
 #include "Heater.h"
 #include <PID_v1.h>
+#include "HeaterGroup.h"
 
 #define HEATER_FULL_INTERVAL_UPDATE 15000
 #define HEATER_CONTROLLER_INTERVAL 1000
@@ -13,13 +14,14 @@ private:
     double _current_power;
     double _current_temperature;
     double _setTemperature;
-    Heater *_heat_weak;
-    Heater *_heat_strong;
+    bool _isOn;
+    HeaterGroup *_heater;
     PID *_pid;
 public:
-    HeatController(Heater *heat_weak, Heater *heat_strong);
-    void SetTemperature(unsigned int temp);
-    void On();
-    void Off();
-    void Update(float current_temp);
+    HeatController(HeaterGroup *heater);
+    void setTemperature(unsigned int temp);
+    void on();
+    void off();
+    bool isOn();
+    void update(double current_temp);
 };
