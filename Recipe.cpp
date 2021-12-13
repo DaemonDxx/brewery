@@ -2,7 +2,7 @@
 
 Recipe::Recipe(unsigned int stage_count) {
     _stages = stage_count;
-    _pauses = new unsigned int[stage_count];
+    _pauses = new unsigned long[stage_count];
     _temperatures = new unsigned int[stage_count];
 }
 
@@ -12,7 +12,7 @@ Recipe::~Recipe()
     delete[] _temperatures;
 }
 
-void Recipe::setStage(unsigned int stage, unsigned int pause, unsigned int temperature) {
+void Recipe::setStage(unsigned int stage, unsigned long pause, unsigned int temperature) {
     _pauses[stage] = pause;
     _temperatures[stage] = temperature;
 }

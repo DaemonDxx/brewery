@@ -1,3 +1,6 @@
+#ifndef __HEATCONTROLLER_H__
+#define __HEATCONTROLLER_H__
+
 #include "Arduino.h"
 #include "enums.h"
 #include "Heater.h"
@@ -20,8 +23,12 @@ private:
 public:
     HeatController(HeaterGroup *heater);
     void setTemperature(unsigned int temp);
+    double getCurrentTemperature();
+    unsigned long getCurrentPower();
     void on();
     void off();
     bool isOn();
     void update(double current_temp);
 };
+
+#endif // __HEATCONTROLLER_H__

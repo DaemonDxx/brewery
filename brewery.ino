@@ -8,6 +8,7 @@
 #include "HeaterGroup.h"
 #include <JC_Button.h>
 #include "Recipe.h"
+#include "Brew.h"
 
 #define HEATER_FULL_INTERVAL_UPDATE 15000
 #define HEATER_WEAK_PIN 5
@@ -23,43 +24,50 @@ Heater heat_weak(HEATER_WEAK_PIN);
 Heater heat_strong(HEATER_STRONG_PIN);
 HeaterGroup hGroup(&heat_weak, &heat_strong);
 HeatController controller(&hGroup);
+Brew brew(&controller);
 
 LiquidCrystal_I2C lcd(0x26,20,4);
-
-int pauses_delay[8] = {0, 3, 5, 6, 8, 9, 2, 5};
-int pauses_temperature[8] = {0, 3, 5, 6, 8, 9, 2, 5};
 
 double tempUp = 0;
 double tempDown = 0;
 double tempAverage = 0;
 
-
 void start_measurment(),
      end_measurment(),
      updateHeater(),
-     updatePowerInfo();
+     updatePowerInfo(),
+     updateBrew();
 
 unsigned long 
   week_power = 0,
   strong_power = 0;
 
+uint8_t
+  minutes_left = 0,
+  seconds_left = 0,
+  set_temperature = 0,
+  stages_count = 0,
+  current_stage = 0;
+
+uint16_t
+  current_power = 0;
+   
 LiquidLine brew_line(1, 0, "- Brew");
 LiquidLine boiling_line(1, 1, "- Boiling");
 LiquidLine heating_line(1, 2, "- Heating");
 LiquidLine test_line(1, 3, "- Test");
 LiquidScreen main_screen(brew_line, boiling_line, heating_line, test_line);
-#define MAIN_SCREEN_INDEX 1
 
 LiquidLine test_temperature_line(1,0, "T1: ", tempUp, " T2: ", tempDown);
-LiquidLine test_heat_weak_line(1,1, "Power weak: ", week_power, " kW");
-LiquidLine test_heat_strong_line(1,2, "Power strong: ", strong_power, " kW");
+LiquidLine test_heat_weak_line(1,1, "Pweak: ", week_power, " kW");
+LiquidLine test_heat_strong_line(1,2, "Pstrong: ", strong_power, " kW");
 LiquidScreen test_screen(test_temperature_line, test_heat_weak_line, test_heat_strong_line);
-#define TEST_SCREEN_INDEX 3
 
-LiquidLine brew_stage_info(4,0, "Stage 1 of 5");
-LiquidLine brew_temp_info(2,2, "T: 88.32C -> 88C");
-LiquidLine brew_time_info(0,3, "Delay: 180:55");
-LiquidScreen brew_screen(brew_stage_info, brew_temp_info, brew_time_info);
+LiquidLine brew_stage_info(4,0, "Stage ", current_stage, " of ", stages_count);
+LiquidLine brew_power_info(2,1, "Power: ", current_power);
+LiquidLine brew_temp_info(2,2, "T: ", tempAverage, " -> ", set_temperature);
+LiquidLine brew_time_info(2,3, "Pause left: ", minutes_left, ":", seconds_left);
+LiquidScreen brew_screen(brew_stage_info, brew_power_info, brew_temp_info, brew_time_info);
 
 LiquidMenu menu(lcd, main_screen, brew_screen, test_screen, 1);
 
@@ -118,6 +126,33 @@ void end_measurment() {
 
 // TEMPERATURE MEASURMENT MODULE EN
 
+//BREW MODULE START
+#define BREW_UPDATE_INTERVAL 1000
+
+Task tBrewUpdate(BREW_UPDATE_INTERVAL, TASK_FOREVER, &updateBrew, &task_manager, true);
+
+void updateTime(unsigned long *time_left, uint8_t *minutes, uint8_t *seconds) {
+  *minutes = floor(*time_left/60);
+  *seconds = (*time_left) % 60;
+}
+
+void updateBrew() {
+  if (menu.get_currentScreen() == &brew_screen) {
+    brew.update();
+    current_stage = brew.getCurrentStage();
+    unsigned long time_left = brew.getTimeLeft();
+    Recipe *current_recipe = brew.getRecipe();
+    set_temperature = current_recipe -> getTemperature(current_stage);
+    stages_count = current_recipe -> getStageCount();
+    current_power = controller.getCurrentPower();
+    updateTime(&time_left, &minutes_left, &seconds_left);
+    current_stage++;
+    menu.update();
+  } 
+}
+
+//BREW MODULE END
+
 // BUZZER MODULE START
 #define START_SIGNAL_INTERVAL 200
 #define START_SIGNAL_ITERATION 1
@@ -164,23 +199,13 @@ void makeSignal(BEEP_MODE signal) {
 }
 // BUZZER MODULE END
 
-// BREW MODULE START
-uint8_t current_pause = 0;
-uint8_t timer_minutes = 0;
-uint8_t timer_second = 0;
-uint8_t current_set_temp = 0;
-
-void
-    nextStage(),
-    waitTemp(),
-    updateTimer();
-
-// BREW MODULE END
+Recipe r(2);
 
 void mainScreenClickHandler() {
   switch (menu.get_focusedLine()) {
     case 0:
       menu.change_screen(2);
+      brew.start();
     break;
 
     case 1:
@@ -229,6 +254,9 @@ void updatePowerInfo() {
 }
 
 void changePowerWeek() {
+  if (!heat_weak.isOn()) {
+    heat_weak.on();
+  }
   int offset = 1;
   if (enter.pressedFor(LONG_PRESS_DELAY) || cancelBtn.pressedFor(LONG_PRESS_DELAY)) {
     offset = 5;
@@ -242,6 +270,9 @@ void changePowerWeek() {
 }
 
 void changePowerStrong() {
+   if (!heat_strong.isOn()) {
+    heat_strong.on();
+  }
   int offset = 1;
   if (enter.pressedFor(LONG_PRESS_DELAY) || cancelBtn.pressedFor(LONG_PRESS_DELAY)) {
     offset = 5;
@@ -272,15 +303,9 @@ void setup() {
   Serial.begin(115200);
   GUIInit();
   buttonsInit();
-  heat_weak.on();
-  heat_strong.on();
-  controller.on();
-  controller.setTemperature(49);
-  Recipe r(1);
-  r.setStage(0, 5, 24);
-  Serial.println(r.getPause(0));
-  Serial.println(r.getTemperature(0));
-  Serial.println(r.getStageCount());
+  r.setStage(0, 60, 34);
+  r.setStage(1, 300, 35);
+  brew.setRecipe(&r);
 }
 
 void mainScreenUpdate() {
@@ -329,6 +354,15 @@ void GUIUpdate() {
     testScreenUpdate();
   }
   if (current_screen != &main_screen && cancelBtn.pressedFor(LONG_PRESS_DELAY) && !menu.is_callable(0)) {
+    if (current_screen == &brew_screen) {
+      brew.cancel();
+    } else if (current_screen == &test_screen) {
+      controller.off();
+      heat_strong.setPower(0);
+      heat_strong.off();
+      heat_weak.setPower(0);
+      heat_weak.off();
+    }
     menu.change_screen(1);
   }
 }

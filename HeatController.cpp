@@ -4,6 +4,8 @@
 #define Ki 20
 #define Kd 10
 
+#define POWER_COEFF 30
+
 HeatController::HeatController(HeaterGroup *heater) {
     _isOn = false;
     _heater = heater;
@@ -18,18 +20,30 @@ void HeatController::on() {
     _isOn = true;
 }
 
-void HeatController::off() {
+void HeatController::off() 
+{
     _heater -> off();
     _isOn = false;
 }
 
 void HeatController::setTemperature(unsigned int temp) {
     _setTemperature = temp;
-    Serial.println(_setTemperature);
 }
 
+double HeatController::getCurrentTemperature() 
+{
+    return _current_temperature;
+}
+
+unsigned long HeatController::getCurrentPower() 
+{   
+    return _current_power * POWER_COEFF;
+}
+
+
 void HeatController::update(double current_temp) {
-    _current_temperature = current_temp;
+    if (_isOn) {
+        _current_temperature = current_temp;
     _pid->Compute();
     _heater -> setPower(_current_power);
     Serial.print(_setTemperature);
@@ -37,6 +51,7 @@ void HeatController::update(double current_temp) {
     Serial.print(_current_temperature);
     Serial.print(" ");
     Serial.println(_current_power);
+    }
 }
 
 bool HeatController::isOn() {
