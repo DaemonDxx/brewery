@@ -5,7 +5,9 @@ enum BEEP_MODE {
     START,
     VERBOSE,
     ERROR ,
-    NEXT_STAGE
+    NEXT_STAGE,
+    END,
+    PAUSE_START
 };
 
 enum HEAT_MODE {

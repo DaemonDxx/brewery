@@ -1,9 +1,10 @@
 #include "Brew.h"
 #define TEMPERATURE_WINDOW -1
 
-Brew::Brew(HeatController *controller) 
+Brew::Brew(HeatController *controller, MakeSoundFunc buzzer) 
 {
     _controller = controller;
+    _buzzer = buzzer;
     _is_On = false;
     _stage = 0;
 }
@@ -31,13 +32,14 @@ void Brew::nextStage()
 {
     if ((_recipe -> getStageCount() - 1) == _stage) {
         this -> cancel();
-    } else {
+    } else if (_is_On) {
          _stage++;
         _is_Pause_Start = false;
         _time_left = _recipe -> getPause(_stage);
         _controller -> setTemperature(_recipe -> getTemperature(_stage));
         _end_time_stage = 0;
         this -> update();
+        _buzzer(NEXT_STAGE);
     }
 }
 
@@ -47,6 +49,7 @@ void Brew::cancel()
     _controller -> off();
     _controller -> setTemperature(0);
     _is_On = false;
+    _buzzer(END);
 }
 
 unsigned int Brew::getCurrentStage() 
@@ -75,9 +78,7 @@ void Brew::update()
             if (_controller -> getCurrentTemperature() - _recipe -> getTemperature(_stage) >= TEMPERATURE_WINDOW) {
                 _is_Pause_Start = true;
                 _end_time_stage = millis()/1000 + _recipe -> getPause(_stage);
-                Serial.println(millis()/1000);
-                Serial.println(_end_time_stage);
-                Serial.println("Pause starts");
+                _buzzer(PAUSE_START);
             } 
         }
     }
