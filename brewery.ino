@@ -26,6 +26,8 @@ HeaterGroup hGroup(&heat_weak, &heat_strong);
 HeatController controller(&hGroup);
 Brew brew(&controller);
 
+Recipe main_recipe(4);
+
 LiquidCrystal_I2C lcd(0x26,20,4);
 
 double tempUp = 0;
@@ -199,12 +201,11 @@ void makeSignal(BEEP_MODE signal) {
 }
 // BUZZER MODULE END
 
-Recipe r(2);
-
 void mainScreenClickHandler() {
   switch (menu.get_focusedLine()) {
     case 0:
       menu.change_screen(2);
+      brew.setRecipe(&main_recipe);
       brew.start();
     break;
 
@@ -299,13 +300,18 @@ void GUIInit() {
   testScreenInit();
 }
 
+void recipeInit() {
+  main_recipe.setStage(0, 900, 55);
+  main_recipe.setStage(1, 3000, 63);
+  main_recipe.setStage(2, 1200, 72);
+  main_recipe.setStage(3, 300, 78);
+}
+
 void setup() {
   Serial.begin(115200);
   GUIInit();
   buttonsInit();
-  r.setStage(0, 60, 34);
-  r.setStage(1, 300, 35);
-  brew.setRecipe(&r);
+  recipeInit();
 }
 
 void mainScreenUpdate() {
@@ -346,12 +352,20 @@ void testScreenUpdate() {
     }
 }
 
+void brewScreenUpdate() {
+  if (right.wasPressed()) {
+    brew.nextStage();
+  }
+}
+
 void GUIUpdate() {
   LiquidScreen *current_screen = menu.get_currentScreen();
   if (current_screen == &main_screen) {
     mainScreenUpdate();
   } else if (current_screen == &test_screen) {
     testScreenUpdate();
+  } else if (current_screen == &brew_screen) {
+    brewScreenUpdate();
   }
   if (current_screen != &main_screen && cancelBtn.pressedFor(LONG_PRESS_DELAY) && !menu.is_callable(0)) {
     if (current_screen == &brew_screen) {

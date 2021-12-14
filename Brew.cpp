@@ -36,7 +36,7 @@ void Brew::nextStage()
         _is_Pause_Start = false;
         _time_left = _recipe -> getPause(_stage);
         _controller -> setTemperature(_recipe -> getTemperature(_stage));
-        _start_stage_time = millis();
+        _end_time_stage = 0;
         this -> update();
     }
 }
@@ -57,11 +57,7 @@ unsigned int Brew::getCurrentStage()
 unsigned int Brew::getTimeLeft() 
 {
     if (_is_Pause_Start) {
-        if (_time_left <= 0) {
-            return 0;
-        } else {
-            return _time_left;
-        }
+        return _time_left;
     } else {
         return _recipe -> getPause(_stage);
     }
@@ -71,14 +67,16 @@ void Brew::update()
 {
     if (_is_On) {
         if (_is_Pause_Start) {
-            _time_left = (_recipe -> getPause(_stage) * 1000 - (millis() + 1000 - _start_stage_time))/1000;
-            Serial.println(_time_left);
-            if (_time_left <= 0) {
+            _time_left = - (millis()/1000 - _end_time_stage);
+            if (_time_left  <= 0) {
                 this -> nextStage();
             }
         } else {
             if (_controller -> getCurrentTemperature() - _recipe -> getTemperature(_stage) >= TEMPERATURE_WINDOW) {
                 _is_Pause_Start = true;
+                _end_time_stage = millis()/1000 + _recipe -> getPause(_stage);
+                Serial.println(millis()/1000);
+                Serial.println(_end_time_stage);
                 Serial.println("Pause starts");
             } 
         }

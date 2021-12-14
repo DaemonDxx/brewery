@@ -17,12 +17,14 @@ private:
     double _current_power;
     double _current_temperature;
     double _setTemperature;
+    uint8_t _max_power;
     bool _isOn;
     HeaterGroup *_heater;
     PID *_pid;
 public:
     HeatController(HeaterGroup *heater);
     void setTemperature(unsigned int temp);
+    void setMaxPower(unsigned int max_power);
     double getCurrentTemperature();
     unsigned long getCurrentPower();
     void on();

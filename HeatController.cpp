@@ -9,6 +9,7 @@
 HeatController::HeatController(HeaterGroup *heater) {
     _isOn = false;
     _heater = heater;
+    _max_power = 100;
     _pid = new PID(&_current_temperature, &_current_power, &_setTemperature, Kp, Ki, Kd, DIRECT);
     _pid -> SetOutputLimits(0, 100);
     _pid -> SetSampleTime(2000);
@@ -23,11 +24,21 @@ void HeatController::on() {
 void HeatController::off() 
 {
     _heater -> off();
+    _heater -> setPower(0);
     _isOn = false;
 }
 
 void HeatController::setTemperature(unsigned int temp) {
     _setTemperature = temp;
+}
+
+void HeatController::setMaxPower(unsigned int max_power) 
+{
+    if (max_power > 100) {
+        _max_power = 100;
+    } else {
+        _max_power = max_power;
+    }
 }
 
 double HeatController::getCurrentTemperature() 
@@ -45,7 +56,11 @@ void HeatController::update(double current_temp) {
     if (_isOn) {
         _current_temperature = current_temp;
     _pid->Compute();
-    _heater -> setPower(_current_power);
+    if (_current_power > _max_power) {
+        _heater -> setPower(_max_power);
+    } else {
+        _heater -> setPower(_current_power);
+    }
     Serial.print(_setTemperature);
     Serial.print(" ");
     Serial.print(_current_temperature);

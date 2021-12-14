@@ -7,7 +7,7 @@ class Brew
 {
 private:
     unsigned int _stage;
-    unsigned long _start_stage_time;
+    unsigned long _end_time_stage;
     unsigned long _time_left;
     bool _is_Pause_Start;
     bool _is_On;
