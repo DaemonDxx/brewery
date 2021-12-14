@@ -48,7 +48,11 @@ double HeatController::getCurrentTemperature()
 
 unsigned long HeatController::getCurrentPower() 
 {   
-    return _current_power * POWER_COEFF;
+    if (_current_power > _max_power) {
+        return _max_power * POWER_COEFF;
+    } else {
+        return _current_power * POWER_COEFF;
+    }
 }
 
 
