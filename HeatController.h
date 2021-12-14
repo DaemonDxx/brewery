@@ -24,6 +24,7 @@ private:
 public:
     HeatController(HeaterGroup *heater);
     void setTemperature(unsigned int temp);
+    double getTemperature();
     void setMaxPower(unsigned int max_power);
     double getCurrentTemperature();
     unsigned long getCurrentPower();

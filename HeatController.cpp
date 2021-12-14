@@ -32,6 +32,11 @@ void HeatController::setTemperature(unsigned int temp) {
     _setTemperature = temp;
 }
 
+double HeatController::getTemperature() 
+{
+    return _setTemperature;
+}
+
 void HeatController::setMaxPower(unsigned int max_power) 
 {
     if (max_power > 100) {

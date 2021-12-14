@@ -64,10 +64,11 @@ LiquidLine boiling_line(1, 1, "- Boiling");
 LiquidLine heating_line(1, 2, "- Heating");
 LiquidScreen main_screen(brew_line, boiling_line, heating_line);
 
-LiquidLine heating_temperature_line(1,0, "T1: ", tempUp, " T2: ", tempDown);
-LiquidLine heating_heat_weak_line(1,1, "Pweak: ", week_power, " kW");
-LiquidLine heating_heat_strong_line(1,2, "Pstrong: ", strong_power, " kW");
-LiquidScreen heating_screen(heating_temperature_line, heating_heat_weak_line, heating_heat_strong_line);
+LiquidLine heating_set_temperature_line(1,0, "Set T: ", set_temperature, "C");
+LiquidLine heating_temperature_line(1,1, "T1: ", tempUp, " T2: ", tempDown);
+LiquidLine heating_heat_weak_line(1,2, "Pweak: ", week_power, " kW");
+LiquidLine heating_heat_strong_line(1,3, "Pstrong: ", strong_power, " kW");
+LiquidScreen heating_screen(heating_set_temperature_line, heating_temperature_line, heating_heat_weak_line, heating_heat_strong_line);
 
 LiquidLine brew_stage_info(4,0, "Stage ", current_stage, " of ", stages_count);
 LiquidLine brew_power_info(2,1, "Power: ", current_power);
@@ -234,10 +235,9 @@ void mainScreenClickHandler() {
 
     case 2:
       menu.change_screen(3);
-    break;
-
-    case 3:
-      menu.change_screen(3);
+      controller.setTemperature(50);
+      set_temperature = 50;
+      controller.on();
     break;
 
   default:
@@ -274,6 +274,9 @@ void updatePowerInfo() {
 }
 
 void changePowerWeek() {
+  if (controller.isOn()) {
+    controller.off();
+  }
   if (!heat_weak.isOn()) {
     heat_weak.on();
   }
@@ -290,7 +293,10 @@ void changePowerWeek() {
 }
 
 void changePowerStrong() {
-   if (!heat_strong.isOn()) {
+  if (controller.isOn()) {
+    controller.off();
+  }
+  if (!heat_strong.isOn()) {
     heat_strong.on();
   }
   int offset = 1;
@@ -305,9 +311,26 @@ void changePowerStrong() {
   updatePowerInfo();
 }
 
-void testScreenInit() {
+void changeSetTemperature() {
+  if (!controller.isOn()) {
+    controller.on();
+  } 
+  int offset = 1;
+  if (enter.pressedFor(LONG_PRESS_DELAY) || cancelBtn.pressedFor(LONG_PRESS_DELAY)) {
+    offset = 5;
+  }
+  if (cancelBtn.isPressed()) {
+    offset *= -1;
+  }
+  int newState = controller.getTemperature() + offset;
+  controller.setTemperature(newState);
+  set_temperature = controller.getTemperature();
+}
+
+void heatingScreenInit() {
   heating_heat_weak_line.attach_function(1, changePowerWeek);
   heating_heat_strong_line.attach_function(1, changePowerStrong);
+  heating_set_temperature_line.attach_function(1, changeSetTemperature);
 }
 
 void GUIInit() {
@@ -316,7 +339,7 @@ void GUIInit() {
   menu.update();
   menu.set_focusPosition(Position::LEFT);
   mainScreenInit();
-  testScreenInit();
+  heatingScreenInit();
 }
 
 void recipeInit() {
@@ -351,7 +374,7 @@ void mainScreenUpdate() {
 
 float tempAverageBefore = tempAverage;
 
-void testScreenUpdate() {
+void heatingScreenUpdate() {
   if (tempAverageBefore != tempAverage) {
     menu.update();
     tempAverageBefore = tempAverage;
@@ -384,7 +407,7 @@ void GUIUpdate() {
   if (current_screen == &main_screen) {
     mainScreenUpdate();
   } else if (current_screen == &heating_screen) {
-    testScreenUpdate();
+    heatingScreenUpdate();
   } else if (current_screen == &brew_screen) {
     brewScreenUpdate();
   }
